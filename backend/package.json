@@ -4,6 +4,8 @@
   "description": "Backend API for FinTrace Graph Intelligence using CognoDB (openCypher over Bolt protocol)",
   "main": "src/server.js",
   "type": "module",
+  "author": "Kartik Chauhan",
+  "license": "MIT",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",

@@ -201,7 +201,7 @@ ORDER BY companyCount DESC;
 ### 1. Clone & Install Dependencies
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/fintrace-graph-intelligence.git
+git clone https://github.com/kartik359/fintrace-graph-intelligence.git
 cd fintrace-graph-intelligence
 
 # Install Backend Dependencies
@@ -335,6 +335,8 @@ fintrace-graph-intelligence/
 
 ---
 
-## 8. License
+## 8. Author & License
 
-MIT License. Designed & developed for the Wexa AI Take-Home Assessment.
+- **Author**: Kartik Chauhan ([@kartik359](https://github.com/kartik359))
+- **Email**: `kartik1642005@gmail.com`
+- **License**: MIT License. Developed for the Wexa AI Take-Home Assessment.
