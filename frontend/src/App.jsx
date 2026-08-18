@@ -9,17 +9,13 @@ import {
   fetchStats, 
   fetchGraph, 
   searchNodes, 
-  fetchNeighborhood, 
   fetchUBO, 
   fetchSanctions 
 } from './utils/api';
 import { 
   Search, 
-  ShieldCheck, 
-  ShieldAlert, 
-  Layers, 
-  SlidersHorizontal,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 
 export default function App() {
@@ -40,7 +36,7 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Modals & UI
+  // Modals
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
 
   // Load initial data
@@ -106,7 +102,7 @@ export default function App() {
     }
   };
 
-  // Handle Search
+  // Search
   const handleSearchChange = async (e) => {
     const q = e.target.value;
     setSearchQuery(q);
@@ -131,7 +127,6 @@ export default function App() {
     setIsSearching(false);
   };
 
-  // Highlights
   const handleHighlightPath = (nodeIds, edgeIds) => {
     setHighlightedPathNodeIds(nodeIds);
     setHighlightedPathEdgeIds(edgeIds);
@@ -146,8 +141,8 @@ export default function App() {
   const companyNodes = nodes.filter(n => n.label === 'Company');
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#070b14] text-slate-100 font-sans overflow-hidden">
-      {/* Top Navigation */}
+    <div className="flex flex-col h-screen w-screen bg-[#060913] text-slate-100 font-sans overflow-hidden">
+      {/* Top Navbar */}
       <Navbar
         connection={connection}
         stats={stats}
@@ -158,15 +153,15 @@ export default function App() {
         loading={loading}
       />
 
-      {/* Main Workspace (Graph Canvas + Search overlay + Side Inspector) */}
+      {/* Center Graph Workspace */}
       <div className="flex-1 flex relative overflow-hidden">
-        {/* Search & Quick Filter Overlay (Top Left of Canvas) */}
-        <div className="absolute top-4 left-4 z-20 w-80">
-          <div className="glass-panel p-1.5 flex items-center gap-2 shadow-2xl border-white/15">
-            <Search className="w-4 h-4 text-cyan-400 ml-1.5 shrink-0" />
+        {/* Floating Quick Search */}
+        <div className="absolute top-3.5 left-3.5 z-20 w-72 sm:w-80">
+          <div className="glass-panel p-1 flex items-center gap-2 shadow-2xl border-white/10">
+            <Search className="w-3.5 h-3.5 text-cyan-400 ml-1.5 shrink-0" />
             <input
               type="text"
-              placeholder="Search companies, oligarchs, accounts..."
+              placeholder="Search companies, persons, accounts..."
               value={searchQuery}
               onChange={handleSearchChange}
               className="bg-transparent border-none w-full text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-0 p-1"
@@ -176,30 +171,30 @@ export default function App() {
                 onClick={() => { setSearchQuery(''); setSearchResults([]); }}
                 className="p-1 text-slate-400 hover:text-white"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3" />
               </button>
             )}
           </div>
 
-          {/* Search Dropdown Results */}
+          {/* Search Dropdown */}
           {searchResults.length > 0 && (
-            <div className="glass-panel mt-1.5 p-1.5 max-h-60 overflow-y-auto space-y-1 shadow-2xl z-30 border-cyan-500/30">
+            <div className="glass-panel mt-1 p-1 max-h-52 overflow-y-auto space-y-1 shadow-2xl z-30 border-cyan-500/30">
               {searchResults.map(node => (
                 <div
                   key={node.id}
                   onClick={() => handleSelectSearchResult(node)}
-                  className="p-2 rounded-lg hover:bg-slate-800/80 cursor-pointer flex items-center justify-between text-xs transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer flex items-center justify-between text-xs transition-colors"
                 >
                   <div className="truncate">
-                    <div className="font-semibold text-white truncate">
+                    <div className="font-semibold text-white truncate text-xs">
                       {node.properties?.name || node.properties?.accountNumber || node.properties?.value || node.id}
                     </div>
                     <div className="text-[10px] text-slate-400">
-                      {node.label} • {node.properties?.jurisdiction || node.properties?.role || 'Node'}
+                      {node.label} • {node.properties?.jurisdiction || node.properties?.role || 'Entity'}
                     </div>
                   </div>
                   {node.properties?.sanctioned && (
-                    <span className="badge-critical text-[9px] px-1.5 py-0.5 rounded font-bold">
+                    <span className="badge-critical text-[9px] px-1.5 py-0.2 rounded font-bold">
                       OFAC
                     </span>
                   )}
@@ -209,7 +204,7 @@ export default function App() {
           )}
         </div>
 
-        {/* Graph Canvas */}
+        {/* High-Performance Canvas */}
         <div className="flex-1 h-full relative">
           <GraphCanvas
             nodes={nodes}
@@ -243,7 +238,7 @@ export default function App() {
         )}
       </div>
 
-      {/* Forensic Investigation Panel (Bottom Dock) */}
+      {/* Forensic Investigation Dock (Collapsible / Resizable) */}
       <InvestigationPanel
         companies={companyNodes}
         allNodes={nodes}
@@ -252,7 +247,7 @@ export default function App() {
         onSelectNode={setSelectedNodeId}
       />
 
-      {/* CognoDB Connection & Instructions Modal */}
+      {/* CognoDB Setup Modal */}
       <ConnectionModal
         connection={connection}
         isOpen={isSetupModalOpen}
