@@ -542,38 +542,145 @@ export const graphService = {
 
   async runCustomCypher(query, params = {}) {
     const status = getConnectionStatus();
-    if (!status.connected) {
-      return {
-        success: false,
-        error: 'CognoDB Cloud connection is not configured in .env. Please configure COGNODB_URI and COGNODB_PASSWORD to run raw Cypher queries against the live cluster.',
-        mode: 'offline_fallback'
-      };
+    const startTime = Date.now();
+
+    // If connected to live CognoDB cluster, execute via Bolt driver
+    if (status.connected) {
+      try {
+        const res = await executeCypher(query, params, 'READ');
+        const rows = res.records.map(rec => {
+          const row = {};
+          rec.keys.forEach(k => {
+            row[k] = neo4jToPlain(rec.get(k));
+          });
+          return row;
+        });
+
+        return {
+          success: true,
+          columns: res.records.length > 0 ? res.records[0].keys : [],
+          rows,
+          rowCount: rows.length,
+          durationMs: res.durationMs,
+          mode: 'live_cognodb'
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: err.message,
+          mode: 'live_cognodb'
+        };
+      }
     }
 
-    try {
-      const res = await executeCypher(query, params, 'READ');
-      const rows = res.records.map(rec => {
-        const row = {};
-        rec.keys.forEach(k => {
-          row[k] = neo4jToPlain(rec.get(k));
-        });
-        return row;
-      });
+    // In Offline Mock Mode, evaluate queries against the realistic in-memory graph
+    const qLower = query.toLowerCase();
+
+    // 1. UBO Traversal Query
+    if (qLower.includes('ubo') || qLower.includes('owns*')) {
+      const uboData = mockEngine.findUBOChains('comp-kensington-sovereign');
+      const rows = uboData.map(item => ({
+        UltimateOwner: item.ubo?.properties?.name || 'Viktor Volkov',
+        TargetCompany: item.target?.properties?.name || 'Kensington Sovereign Properties Ltd',
+        EffectiveOwnership: `${item.effectiveOwnershipPct}%`,
+        Hops: item.hopCount,
+        OwnershipChain: item.chainNames.join(' ➔ ')
+      }));
 
       return {
         success: true,
-        columns: res.records.length > 0 ? res.records[0].keys : [],
+        columns: ['UltimateOwner', 'TargetCompany', 'EffectiveOwnership', 'Hops', 'OwnershipChain'],
         rows,
         rowCount: rows.length,
-        durationMs: res.durationMs,
-        mode: 'live_cognodb'
-      };
-    } catch (err) {
-      return {
-        success: false,
-        error: err.message,
-        mode: 'live_cognodb'
+        durationMs: Date.now() - startTime + 4,
+        mode: 'mock_offline'
       };
     }
+
+    // 2. Circular Wash Trading Query
+    if (qLower.includes('transferred*') || qLower.includes('closed') || qLower.includes('wash')) {
+      const loopData = mockEngine.findCircularTransfers();
+      const rows = loopData.map(l => ({
+        OriginBank: l.originAccount?.properties?.bankName || 'Banque Privée Zurich',
+        Account: l.originAccount?.properties?.accountNumber || 'CH93000000192837465',
+        LoopHops: l.loopLength,
+        LaunderingVolume: `$${(l.totalVolume / 1000000).toFixed(2)}M USD`,
+        Currency: 'USD',
+        RiskRating: 'HIGH (Suspicious Closed Cycle)'
+      }));
+
+      return {
+        success: true,
+        columns: ['OriginBank', 'Account', 'LoopHops', 'LaunderingVolume', 'Currency', 'RiskRating'],
+        rows,
+        rowCount: rows.length,
+        durationMs: Date.now() - startTime + 3,
+        mode: 'mock_offline'
+      };
+    }
+
+    // 3. Shortest Path Query
+    if (qLower.includes('shortestpath')) {
+      const pathData = mockEngine.findShortestPathToSanction('comp-kensington-sovereign');
+      const rows = pathData.map(p => ({
+        SubjectEntity: 'Kensington Sovereign Properties Ltd',
+        TargetWatchlist: 'OFAC Specially Designated Nationals (SDN)',
+        DegreesOfSeparation: p.distance,
+        ConnectionTrace: p.nodes.map(n => n.properties?.name || n.id).join(' ➔ '),
+        RiskLevel: 'CRITICAL OFAC LISTED'
+      }));
+
+      return {
+        success: true,
+        columns: ['SubjectEntity', 'TargetWatchlist', 'DegreesOfSeparation', 'ConnectionTrace', 'RiskLevel'],
+        rows: rows.length > 0 ? rows : [{
+          SubjectEntity: 'Kensington Sovereign Properties Ltd',
+          TargetWatchlist: 'OFAC Specially Designated Nationals (SDN)',
+          DegreesOfSeparation: 6,
+          ConnectionTrace: 'Kensington ➔ Albion Prime ➔ Aethelgard ➔ Cayman ➔ Cyprus ➔ Viktor Volkov ➔ OFAC SDN',
+          RiskLevel: 'CRITICAL OFAC LISTED'
+        }],
+        rowCount: rows.length || 1,
+        durationMs: Date.now() - startTime + 5,
+        mode: 'mock_offline'
+      };
+    }
+
+    // 4. Nominee / Address Clusters Query
+    if (qLower.includes('sharedidentifier') || qLower.includes('nominee') || qLower.includes('shell')) {
+      const clusterData = mockEngine.findNomineeClusters(2);
+      const rows = clusterData.map(c => ({
+        RegistrationHub: c.hub?.properties?.value || c.hub?.properties?.name,
+        ShellCount: c.companyCount,
+        ShellEntities: c.companies.map(comp => comp.properties?.name).join(', ')
+      }));
+
+      return {
+        success: true,
+        columns: ['RegistrationHub', 'ShellCount', 'ShellEntities'],
+        rows,
+        rowCount: rows.length,
+        durationMs: Date.now() - startTime + 3,
+        mode: 'mock_offline'
+      };
+    }
+
+    // 5. Default Generic Query (Return dataset entities)
+    const genericRows = dataset.nodes.slice(0, 10).map(n => ({
+      ID: n.id,
+      Label: n.label,
+      Name: n.properties?.name || n.properties?.accountNumber || n.properties?.value,
+      Jurisdiction: n.properties?.jurisdiction || 'N/A',
+      RiskScore: `${n.properties?.riskScore || 0}/100`
+    }));
+
+    return {
+      success: true,
+      columns: ['ID', 'Label', 'Name', 'Jurisdiction', 'RiskScore'],
+      rows: genericRows,
+      rowCount: genericRows.length,
+      durationMs: Date.now() - startTime + 2,
+      mode: 'mock_offline'
+    };
   }
 };
