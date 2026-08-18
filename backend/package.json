@@ -1,0 +1,18 @@
+{
+  "name": "fintrace-backend",
+  "version": "1.0.0",
+  "description": "Backend API for FinTrace Graph Intelligence using CognoDB (openCypher over Bolt protocol)",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/data/seed.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "neo4j-driver": "^5.28.1"
+  }
+}
