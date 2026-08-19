@@ -1,13 +1,35 @@
-/**
- * API Client Utility for FinTrace Backend & CognoDB
- */
+import {
+  demoNodes,
+  demoRelationships,
+  getDemoCircularTransfers,
+  getDemoNeighborhood,
+  getDemoNomineeClusters,
+  getDemoSanctions,
+  getDemoStats,
+  getDemoUBO,
+  searchDemoNodes,
+} from '../data/demoGraph.js';
 
 const API_BASE = '/api';
 
+async function requestJson(path, options) {
+  const response = await fetch(`${API_BASE}${path}`, options);
+  const contentType = response.headers.get('content-type') || '';
+
+  if (!response.ok) {
+    throw new Error(`API request failed with status ${response.status}`);
+  }
+
+  if (!contentType.includes('application/json')) {
+    throw new Error('API returned a non-JSON response');
+  }
+
+  return response.json();
+}
+
 export async function fetchHealth() {
   try {
-    const res = await fetch(`${API_BASE}/health`);
-    return await res.json();
+    return await requestJson('/health');
   } catch (err) {
     return {
       status: 'offline',
@@ -19,59 +41,83 @@ export async function fetchHealth() {
 }
 
 export async function fetchStats() {
-  const res = await fetch(`${API_BASE}/stats`);
-  if (!res.ok) throw new Error('Failed to load stats');
-  return await res.json();
+  try {
+    return await requestJson('/stats');
+  } catch {
+    return getDemoStats();
+  }
 }
 
 export async function fetchGraph(limit = 200) {
-  const res = await fetch(`${API_BASE}/graph?limit=${limit}`);
-  if (!res.ok) throw new Error('Failed to load graph data');
-  return await res.json();
+  try {
+    return await requestJson(`/graph?limit=${limit}`);
+  } catch {
+    return { nodes: demoNodes.slice(0, limit), relationships: demoRelationships };
+  }
 }
 
 export async function searchNodes(query) {
   if (!query || query.trim() === '') return { results: [] };
-  const res = await fetch(`${API_BASE}/nodes/search?q=${encodeURIComponent(query)}`);
-  if (!res.ok) throw new Error('Search failed');
-  return await res.json();
+  try {
+    return await requestJson(`/nodes/search?q=${encodeURIComponent(query)}`);
+  } catch {
+    return { results: searchDemoNodes(query) };
+  }
 }
 
 export async function fetchNeighborhood(nodeId) {
-  const res = await fetch(`${API_BASE}/nodes/${nodeId}/neighborhood`);
-  if (!res.ok) throw new Error('Failed to load node neighborhood');
-  return await res.json();
+  try {
+    return await requestJson(`/nodes/${nodeId}/neighborhood`);
+  } catch {
+    return getDemoNeighborhood(nodeId);
+  }
 }
 
 export async function fetchUBO(targetCompanyId) {
-  const res = await fetch(`${API_BASE}/analytics/ubo?targetCompanyId=${encodeURIComponent(targetCompanyId)}`);
-  if (!res.ok) throw new Error('Failed to execute UBO analysis');
-  return await res.json();
+  try {
+    return await requestJson(`/analytics/ubo?targetCompanyId=${encodeURIComponent(targetCompanyId)}`);
+  } catch {
+    return getDemoUBO(targetCompanyId);
+  }
 }
 
 export async function fetchCircularTransfers() {
-  const res = await fetch(`${API_BASE}/analytics/circular-transfers`);
-  if (!res.ok) throw new Error('Failed to execute circular transfer detection');
-  return await res.json();
+  try {
+    return await requestJson('/analytics/circular-transfers');
+  } catch {
+    return getDemoCircularTransfers();
+  }
 }
 
 export async function fetchSanctions(startEntityId) {
-  const res = await fetch(`${API_BASE}/analytics/sanctions?startEntityId=${encodeURIComponent(startEntityId)}`);
-  if (!res.ok) throw new Error('Failed to trace sanction shortest path');
-  return await res.json();
+  try {
+    return await requestJson(`/analytics/sanctions?startEntityId=${encodeURIComponent(startEntityId)}`);
+  } catch {
+    return getDemoSanctions(startEntityId);
+  }
 }
 
 export async function fetchNomineeClusters(threshold = 2) {
-  const res = await fetch(`${API_BASE}/analytics/nominee-clusters?threshold=${threshold}`);
-  if (!res.ok) throw new Error('Failed to load nominee clusters');
-  return await res.json();
+  try {
+    return await requestJson(`/analytics/nominee-clusters?threshold=${threshold}`);
+  } catch {
+    return getDemoNomineeClusters();
+  }
 }
 
 export async function runCypher(query, params = {}) {
-  const res = await fetch(`${API_BASE}/cypher/run`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, params })
-  });
-  return await res.json();
+  try {
+    return await requestJson('/cypher/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, params })
+    });
+  } catch {
+    return {
+      success: true,
+      mode: 'offline_fallback',
+      records: [],
+      summary: 'The query console requires a connected CognoDB backend. The interactive demo graph remains available.',
+    };
+  }
 }
